@@ -1,0 +1,325 @@
+{"tags":[{"id":"04ce8d27-efcf-43f6-b572-af23ad8feeba","name":"appMarketEmbed","content":"
+<script>
+    \
+    n\ n(function() {\
+        n
+        const METASITE_APP_DEF_ID = '22bef345-3c5b-4c18-b782-74d4085112ff';\
+        n\ n
+        const getXSRFTokenFromCookie = () => {\
+            n
+            const match = new RegExp('XSRF-TOKEN=(.+?);').exec(document.cookie);\
+            n
+            return match ? match[1] : '';\
+            n
+        };\
+        n\ n
+        const eventNames = {\
+            n Purchase: 'Purchase',
+            \n Lead: 'Lead',
+            \n
+        };\
+        n\ n
+        const eventNameToConversionActionCategory = {\
+            n[eventNames.Purchase]: 'PURCHASE',
+            \n[eventNames.Lead]: 'SUBMIT_LEAD_FORM',
+            \n
+        };\
+        n\ n
+        const channelParams = {\
+            n price: 'price',
+            \n id: 'id',
+            \n currency: 'currency',
+            \n name: 'name',
+            \n category: 'category',
+            \n brand: 'brand',
+            \n variant: 'variant',
+            \n list: 'list_name',
+            \n quantity: 'quantity',
+            \n step: 'checkout_step',
+            \n option: 'checkout_option',
+            \n position: 'list_position',
+            \n coupon: 'coupon',
+            \n affiliation: 'affiliation',
+            \n revenue: 'value',
+            \n tax: 'tax',
+            \n sku: 'sku',
+            \n shipping: 'shipping',
+            \n
+        };\
+        n\ n
+        const mapContents = ({
+            contents = []
+        }) => \n contents.map(({
+            currency,
+            ...product
+        }) => \n paramsMapper(product, channelParams), \n);\
+        n\ n
+        const paramsMapper = (params, mapper) => {\
+            n
+            const mappedParams = Object.keys(params);\
+            n
+            if (mappedParams.length === 0) {\
+                n
+                return params;\
+                n
+            }\
+            n
+            return mappedParams.reduce((mappedObject, currentKey) => {\
+                n
+                const newKey = mapper[currentKey];\
+                n
+                if (newKey && (params[currentKey] || params[currentKey] === 0)) {\
+                    n mappedObject[newKey] = params[currentKey];\
+                    n
+                }\
+                n
+                return mappedObject;\
+                n
+            }, {});\
+            n
+        };\
+        n\ n
+        const loadGtag = () => {\
+            n
+            const gtagInitScript = document.createElement('script');\
+            n gtagInitScript.type = 'text/javascript';\
+            n gtagInitScript.innerHTML = `\n      window.dataLayer = window.dataLayer || [];\n      function gtag(){dataLayer.push(arguments);}\n      gtag('js', new Date())\n    `;\
+            n document.head.appendChild(gtagInitScript);\
+            n\ n
+            const gtagScript = document.createElement('script');\
+            n gtagScript.type = 'text/javascript';\
+            n gtagScript.setAttribute('async', 'true');\
+            n gtagScript.setAttribute('src', 'https://www.googletagmanager.com/gtag/js');\
+            n document.head.appendChild(gtagScript);\
+            n
+        };\
+        n\ n
+        const handleGoogleConsent = () => {\
+            n window.dataLayer = window.dataLayer || [];\
+            n\ n
+            if (window.consentPolicyManager && window.consentPolicyManager.initRan) {\
+                n
+                const {
+                    policy
+                } = window.consentPolicyManager.getCurrentConsentPolicy();\
+                n setConsent('default', policy);\
+                n
+            } else {\
+                n setConsent('default', {\
+                    n advertising: false,
+                    \n analytics: false,
+                    \n functional: false,
+                    \n waitForUpdate: 500,
+                    \n
+                });\
+                n
+            }\
+            n\ n window.document.addEventListener(\n 'consentPolicyInitialized', \n({
+                detail
+            }) => {\
+                n setConsent('update', detail.policy);\
+                n
+            }, \n);\
+            n\ n window.document.addEventListener('consentPolicyChanged', ({
+                detail
+            }) => {\
+                n setConsent('update', detail.policy);\
+                n
+            });\
+            n\ n
+            function setConsent(\n action, \n {
+                advertising,
+                analytics,
+                functional,
+                waitForUpdate
+            }, \n) {\
+                n(function() {\
+                    n window.dataLayer.push(arguments);\
+                    n
+                })('consent', action, {\
+                    n ad_storage: advertising ? 'granted' : 'denied',
+                    \n ad_user_data: advertising ? 'granted' : 'denied',
+                    \n ad_personalization: advertising ? 'granted' : 'denied',
+                    \n analytics_storage: analytics ? 'granted' : 'denied',
+                    \n functionality_storage: functional ? 'granted' : 'denied',
+                    \n personalization_storage: 'granted',
+                    \n security_storage: 'granted',
+                    \n...(waitForUpdate ? {
+                        wait_for_update: waitForUpdate
+                    } : {}),
+                    \n
+                });\
+                n
+            }\
+            n
+        };\
+        n\ n
+        let conversionActions;\
+        n
+        const loadConversionActions = () => {\
+            n
+            const XSRFToken = getXSRFTokenFromCookie();\
+            n\ n
+            const headers = {\
+                n 'Content-Type': 'application/json',
+                \n 'X-XSRF-TOKEN': XSRFToken,
+                \n
+            };\
+            n\ n
+            const getAppToken = window.wixEmbedsAPI ? .getAppToken;\
+            n\ n
+            if (getAppToken) {\
+                n headers.authorization = getAppToken(METASITE_APP_DEF_ID);\
+                n
+            }\
+            n\ n
+            const metaSiteId = window.wixEmbedsAPI ? .getMetaSiteId();\
+            n\ n
+            return fetch(\n `${window.location.origin}/_serverless/pa-google/v1/accounts/current-site/conversion-actions?metaSiteId=${metaSiteId}`, \n {\
+                n method: 'GET', \n headers, \n
+            }, \n)\ n.then((response) => response.json())\ n.then((data) => {\
+                n conversionActions = data.conversionActions;\
+                n gtag('config', conversionActions[0].conversionId);\
+                n
+            });\
+            n
+        };\
+        n\ n
+        const reportEvent = (eventName, eventParams) => {\
+            n
+            const category = eventNameToConversionActionCategory[eventName];\
+            n
+            const conversionAction = conversionActions.find(\n(currentConversionAction) => \n currentConversionAction.category.category === category, \n);\
+            n\ n
+            if (conversionAction) {\
+                n
+                let conversionData = {\
+                    n send_to: `${conversionAction.conversionId}/${conversionAction.conversionLabel}`,
+                    \n
+                };\
+                n\ n
+                switch (category) {\
+                    n
+                    case 'PURCHASE':
+                        {\
+                            n
+                            const {
+                                revenue,
+                                id,
+                                currency,
+                                coupon,
+                                ...params
+                            } = eventParams;\n conversionData = {\
+                                n...conversionData,
+                                \n...paramsMapper({
+                                    revenue,
+                                    id,
+                                    currency,
+                                    coupon
+                                }, channelParams),
+                                \n transactionId: eventParams.id,
+                                \n items: mapContents(params),
+                                \n
+                            };\n
+                            break;\n
+                        }\
+                        n
+                    default:
+                        \n
+                        break;\
+                        n
+                }\
+                n\ n gtag('event', 'conversion', conversionData);\
+                n
+            }\
+            n
+        };\
+        n\ n
+        let isBootstrapped = false;\
+        n
+        const bootstrap = () => {\
+            n handleGoogleConsent();\
+            n loadGtag();\
+            n
+            return loadConversionActions().then(() => {\
+                n isBootstrapped = true;\
+                n
+            });\
+            n
+        };\
+        n\ n
+        const bootstrapPromise = bootstrap();\
+        n\ n
+        const registerListener = () => {\
+            n window.wixDevelopersAnalytics.register(\n 'd6708a0e-5b2a-458e-8cfe-bdca240aa2ce', \n(eventName, eventParams) => {\
+                n
+                if (isBootstrapped) {\
+                    n reportEvent(eventName, eventParams);\
+                    n
+                } else {\
+                    n bootstrapPromise.then(() => {\
+                        n reportEvent(eventName, eventParams);\
+                        n
+                    });\
+                    n
+                }\
+                n
+            }, \n);\
+            n
+        };\
+        n\ n window.wixDevelopersAnalytics\ n ? registerListener()\ n : window.addEventListener('wixDevelopersAnalyticsReady', registerListener);\
+        n
+    })();\
+    n\ n\ n
+</script>","config":{},"position":"head","loadOnce":true,"category":"analytics","domain":"journeyscentralwest.com.au","pages":[],"appInfo":{"id":"d6708a0e-5b2a-458e-8cfe-bdca240aa2ce","version":"^0.0.0","componentId":""}},{"id":"80811492-2766-41ee-bc46-41bf58a292b5","name":"appMarketEmbed","content":"
+<script>
+    \
+    nfunction registerListener() {\
+            n window.wixDevelopersAnalytics.register(\n 'cf06bdf3-5bab-4f20-b165-97fb723dac6a', \n(eventName, eventParams, options) => {\
+                n
+                const XSRFToken = getXSRFTokenFromCookie()\ n fetch(\n `${window.location.origin}/_serverless/analytics-reporter/facebook/event`, \n {\
+                    n method: 'POST', \n headers: {\
+                        n 'Content-Type': 'application/json',
+                        \n 'X-XSRF-TOKEN': XSRFToken,
+                        \n
+                    }, \n body: JSON.stringify({
+                        eventName,
+                        data: eventParams
+                    }), \n
+                }, \n);\
+                n
+            }, \n);\
+            n
+            function getXSRFTokenFromCookie() {\
+                n
+                var match = document.cookie.match(new RegExp(\"XSRF-TOKEN=(.+?);\"));\n    return match ? match[1] : \"\";\n  }\n}\nwindow.wixDevelopersAnalytics\n  ? registerListener()\n  : window.addEventListener('wixDevelopersAnalyticsReady', registerListener);\n
+</script>","config":{},"position":"head","loadOnce":true,"category":"analytics","domain":"journeyscentralwest.com.au","pages":[],"appInfo":{"id":"cf06bdf3-5bab-4f20-b165-97fb723dac6a","version":"^0.0.0","componentId":""}},{"id":"d1acd88a-8898-4119-8249-3e64b5a73d98","name":"Facebook
+Pixel","content":"
+<!-- Facebook Pixel Code -->\n
+<script>
+    \
+    n! function(f, b, e, v, n, t, s)\ n {
+        if (f.fbq) return;
+        n = f.fbq = function() {
+            n.callMethod ? \n n.callMethod.apply(n, arguments) : n.queue.push(arguments)
+        };\
+        n
+        if (!f._fbq) f._fbq = n;
+        n.push = n;
+        n.loaded = !0;
+        n.version = '2.0';
+        n.agent = 'plwix';\
+        n n.queue = [];
+        t = b.createElement(e);
+        t.async = !0;\
+        n t.src = v;
+        s = b.getElementsByTagName(e)[0];\
+        n s.parentNode.insertBefore(t, s)
+    }(window, document, 'script', \n 'https://connect.facebook.net/en_US/fbevents.js');\
+    n fbq('init', '878644867000848', {
+        external_id: 'b1a7ceb2-d76f-4b88-9aed-df9e8cfd3cab'
+    });\
+    n fbq('track', 'PageView');\
+    n
+</script>\n<noscript>\n  <img height=\"1\" width=\"1\" style=\"display:none\"\n       src=\"https://www.facebook.com/tr?id=878644867000848&ev=PageView&noscript=1\"/>\n</noscript>\n
+<!-- End Facebook Pixel Code -->\n","config":{"type":"facebookPixel","domain":"journeyscentralwest.com.au","trackingId":"878644867000848","category":{},"siteMemberOrVisitorId":"b1a7ceb2-d76f-4b88-9aed-df9e8cfd3cab"},"position":"HEAD","loadOnce":false,"category":"advertising","domain":"journeyscentralwest.com.au","pages":[]}],"errors":[],"config":{"consentPolicy":null,"geo":"IN","experiments":{"specs.tagManagerPartytown":"true","specs.tagManagerConfigOverrides":"true","specs.tagManagerRenderTagByPageID":"true","specs.ignoreDisabledAppMarketTemplates":"false","specs.tagManagerEmbedScriptsFreeSites":"true","specs.tagManagerRenderGoogleConsentModeTags":"true","specs.cookieConsent.OverrideUoUConsentVersion":"false","specs.tagManagerNewSiteEmbedsService":"true","specs.cookieConsent.CcpHostsIntegration":"true","specs.cookieConsent.CcpML_MigrationUoU":"true","specs.returnNonEssentialCustomEmbeds":"true"},"gdprEnforcedGeo":false}}
